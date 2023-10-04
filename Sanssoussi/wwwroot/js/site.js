@@ -10,7 +10,11 @@ function AddComments() {
         $.ajax({
                 url: ResolveUrl("~/home/comments"),
                 type: "POST",
-                data: { comment: $("#NewComment").val() },
+            data: { comment: $("#NewComment").val() },
+            headers: {
+                RequestVerificationToken:
+                    $('input:hidden[name="__RequestVerificationToken"]').val()
+            },
                 success: function (status) {
                     if (status != "success") {
                         alert(status);

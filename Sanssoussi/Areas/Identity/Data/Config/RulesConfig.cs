@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using Microsoft.EntityFrameworkCore;
 
 using Sanssoussi.Areas.Identity.Data.Config;
+using Sanssoussi.Areas.Identity.Data.Config.Const;
 
 
 namespace Sanssoussi.Areas.Identity.Data.Config
@@ -12,8 +13,8 @@ namespace Sanssoussi.Areas.Identity.Data.Config
     {
         public void Configure(EntityTypeBuilder<IdentityRole> builder)
         {
-            builder.HasData( new IdentityRole{ Id = "", Name = "", NormalizedName = "" },
-                                new IdentityRole{ Id = "", Name = "", NormalizedName = "" } );
+            builder.HasData( new IdentityRole{ Id = "", Name = Rules.Client, NormalizedName = Rules.Client.ToUpper()},
+                                new IdentityRole{ Id = "", Name = Rules.Admin, NormalizedName = Rules.Admin.ToUpper() } );
         }
 
     }

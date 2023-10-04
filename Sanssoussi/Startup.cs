@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.AspNetCore.Authentication.Google;
 
 namespace Sanssoussi
 {
@@ -20,6 +21,20 @@ namespace Sanssoussi
         {
             services.AddRazorPages();
             services.AddControllersWithViews();
+
+            // A02:2021 : Stockage des donnes sensible
+            services.AddAuthentication().AddGoogle(
+                GoogleOptions =>
+                {
+                    GoogleOptions.ClientId = Configuration["Authentication:Google:ClientId"];
+                    GoogleOptions.ClientSecret= Configuration["Authentication:Google:ClientSecret"];
+                });
+
+            // INFO EN CLAIR JUST POUR LE TEST
+
+            // ID : 387338168029-77jciq0gvlv3ubo7h5886mb46e7d8tgo.apps.googleusercontent.com
+            // sercet : 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
+
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -33,7 +48,14 @@ namespace Sanssoussi
             else
             {
                 app.UseExceptionHandler("/Home/Error");
+                app.UseHsts(); // A02:2021 : Defaillance cryptographique (Protocole de chiffrement Faible) -> Forcer l'utilisation du HTTPS en 
+                                // appliquant le mecanisme HSTS
+
             }
+
+            app.UseHttpsRedirection(); // A02:2021 : Defaillance cryptographique (Protocole de chiffrement Faible) -> Forcer la redirection vers HTTPS quand c'Est un HTTP
+
+
 
             app.UseStaticFiles();
 
