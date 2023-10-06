@@ -37,6 +37,8 @@ namespace Sanssoussi.Controllers
             this._dbConnection = new SqliteConnection(configuration.GetConnectionString("SanssoussiContextConnection"));
         }
 
+
+
         [AllowAnonymous]
         public IActionResult Index()
         {
@@ -70,6 +72,8 @@ namespace Sanssoussi.Controllers
                             , this._dbConnection);
 
             // passe le parametre dans la commande
+            // parameterized queries empeche les injeciton SQL
+
             cmd.Parameters.AddWithValue("idUser", idUser);
 
             this._dbConnection.Open();
@@ -95,19 +99,53 @@ namespace Sanssoussi.Controllers
             // test : R-0
             Console.WriteLine("R-0");
 
-            var user = await this._userManager.GetUserAsync(this.User);
-            if (user == null)
+            // A03:2021 Injection : data validation Function
+
+            if (string.IsNullOrEmpty(comment))
             {
-                throw new InvalidOperationException("Vous devez vous connecter");
+                var user = await this._userManager.GetUserAsync(this.User);
+                // journalisation de tout les commentaire
+                // A09:2021
+                _logger.LogWarning("Commentaire Malveillant ajoute par UserId : {user.Id} !!!!!", user.Id);
+                _logger.LogWarning("Time : {DateTime.Now}", DateTime.Now);
+                return null;
+            }
+            else
+            {
+                // pour depaser le risk d'executer des commandes SQL tell que : ( ' UNION , etc)
+
+                comment = comment.Replace("'", "''");
+
+                // validation des donnees
+                var user = await this._userManager.GetUserAsync(this.User);
+                if (user == null)
+                {
+                    throw new InvalidOperationException("Vous devez vous connecter");
+                }
+
+                // entree des variable et la commande SQL
+                // parameterized queries empeche les injeciton SQL
+
+                var guidNewGuide = Guid.NewGuid();
+                var IdUser = user.Id;
+                var cmd = new SqliteCommand( $"insert into Comments (UserId, CommentId, Comment) Values (@userId, @guidNewGuid, @comment)",this._dbConnection);
+
+                // ajout des parametres a la commande SQL
+                cmd.Parameters.AddWithValue("userId", IdUser);
+                cmd.Parameters.AddWithValue("guidNewGuid", guidNewGuide);
+                cmd.Parameters.AddWithValue("comment", comment);
+
+                this._dbConnection.Open();
+                await cmd.ExecuteNonQueryAsync();
+
+                // journalisation de tout les commentaire
+                // A09:2021 : Journalisation
+                _logger.LogWarning("Commentaire ajoute par UserId : {user.Id} ", IdUser);
+                _logger.LogWarning("Time : {DateTime.Now}", DateTime.Now );
+
+                return this.Ok("Commentaire ajouté");
             }
 
-            var cmd = new SqliteCommand(
-                $"insert into Comments (UserId, CommentId, Comment) Values ('{user.Id}','{Guid.NewGuid()}','" + comment + "')",
-                this._dbConnection);
-            this._dbConnection.Open();
-            await cmd.ExecuteNonQueryAsync();
-
-            return this.Ok("Commentaire ajouté");
         }
 
         [Authorize(Roles = Rules.Client + "," + Rules.Admin)]
@@ -118,16 +156,31 @@ namespace Sanssoussi.Controllers
             var user = await this._userManager.GetUserAsync(this.User);
             if (user == null || string.IsNullOrEmpty(searchData))
             {
+                // journalisation de tout les recherche
+                // A09:2021
+                _logger.LogWarning("recherche Malveillant possible par UserId : {user.Id} !!!!!", user.Id);
+                _logger.LogWarning("Time : {DateTime.Now}", DateTime.Now);
                 return this.View(searchResults);
             }
 
-            var cmd = new SqliteCommand($"Select Comment from Comments where UserId = '{user.Id}' and Comment like '%{searchData}%'", this._dbConnection);
+            // A03:2021 : Injection SQL
+            // parameterized queries empeche les injeciton SQL
+            var idUser = user.Id;
+            var cmd = new SqliteCommand($"Select Comment from Comments where UserId = @userId and Comment like %@searchData%", this._dbConnection);
+            cmd.Parameters.AddWithValue("userId", idUser);
+            cmd.Parameters.AddWithValue("searchData", searchData);
             this._dbConnection.Open();
             var rd = await cmd.ExecuteReaderAsync();
             while (rd.Read())
             {
+
                 searchResults.Add(rd.GetString(0));
             }
+
+            // journalisation de tout les recherche
+            // A09:2021 : Journalisation
+            _logger.LogWarning("Commentaire ajoute par UserId : {idUser} ", idUser);
+            _logger.LogWarning("Time : {DateTime.Now}", DateTime.Now);
 
             rd.Close();
             this._dbConnection.Close();

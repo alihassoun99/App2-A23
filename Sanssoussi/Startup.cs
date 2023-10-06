@@ -30,7 +30,7 @@ namespace Sanssoussi
                     GoogleOptions.ClientSecret= Configuration["Authentication:Google:ClientSecret"];
                 });
 
-            // INFO EN CLAIR JUST POUR LE TEST
+            // INFO EN CLAIR JUST POUR La validation et la problematique
 
             // ID : 387338168029-77jciq0gvlv3ubo7h5886mb46e7d8tgo.apps.googleusercontent.com
             // sercet : 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
